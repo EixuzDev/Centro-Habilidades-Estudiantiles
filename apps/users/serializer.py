@@ -128,7 +128,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     estudiante_username = serializers.CharField(source="estudiante.user.username",read_only=True)
     class Meta:
         model = Review
-        fields = ['id','tutoria','tutor_username','estudiante_username','calificacion','comentario','fecha']
+        fields = ['id','tutoria','tutor_username','estudiante_username','comentario','calificacion','fecha']
 
 
 

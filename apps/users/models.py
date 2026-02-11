@@ -172,7 +172,7 @@ class Review(models.Model):
             (3,'Bueno'),
             (4,'Muy Bueno'),
             (5,'Excelente')
-        ]
+        ],
     )
 
     comentario = models.TextField(blank=True)

@@ -24,5 +24,3 @@ El módulo del rol de tutores crear y actualizar su perfil con habilidades ofrec
 que tiene conocimiento y su disponibilidad. Acepta solicitud de estudiante, agendar sesiones y recibir valoraciones y reseñas Acordar métodos de pago
 
 El usuario que busca aprender crea su perfil de intenres y habilidad que desea adquirir. Buscar mentores por categoría, nivel e disponibilidad, valora y reseña a los mentores
-
-PD: Nos falta las excepciones personalizadas y los throttling
