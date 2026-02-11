@@ -76,7 +76,6 @@ ROOT_URLCONF = 'core.urls'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        # 'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'core.authentication.CookieJWTAuthentication'
@@ -91,11 +90,14 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
     ],
 
-    # 'DEFAULT_THROTTLE_RATES':{
-    #     'user':'100/day',
-    #     'anon':'100/day',
-    #     'estudiante':'10/minute'
-    # }
+    'DEFAULT_THROTTLE_RATES':{
+        'user':'100/day',
+        'anon':'100/day',
+        'estudiante_throttling':'30/minute',
+        'tutor_throttling':'30/minute',
+        'general_throttling':'20/minute'
+
+    }
 }
 
 CACHES = {

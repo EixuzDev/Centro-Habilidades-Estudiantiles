@@ -1,0 +1,2 @@
+class PermissionDenegado(Exception):
+    pass

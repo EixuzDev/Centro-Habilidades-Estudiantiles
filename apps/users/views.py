@@ -10,7 +10,8 @@ from .models import User,Crear_Cuenta_Tutor,Crear_Cuenta_Estudiante , SkillMatch
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from .permission import IsTutor, IsEstudiante, IsAdmin
-from .throttle import Profile_Estudiante
+from .throttle import Estudiante_Throttling, Tutor_Throttling, General_Throttling
+from .exception import PermissionDenegado
 # Create your views here.
 
 class RegisterViewRole(ModelViewSet):
@@ -110,6 +111,7 @@ class TutorView(ModelViewSet):
     queryset = Crear_Cuenta_Tutor.objects.all()
     serializer_class = TutorCuentaSerializer
     permission_classes = [IsAuthenticated, IsTutor]
+    throttle_classes = [Tutor_Throttling]
     
     def get_queryset(self):
         user = self.request.user
@@ -119,13 +121,14 @@ class TutorView(ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         if Crear_Cuenta_Tutor.objects.filter(user=user).exists():
-            raise ValueError('Ya tienes un perfil Creado')
+            raise PermissionDenegado('Ya tienes un perfil Creado')
         serializer.save(user=user)
 
 class TutorSkillView(ModelViewSet):
     queryset = TutorSkill.objects.all()
     serializer_class = TutorSkillSerializer
     permission_classes = [IsAuthenticated, IsTutor]
+    throttle_classes = [Tutor_Throttling]
     
     def get_queryset(self):
         user = self.request.user
@@ -139,13 +142,14 @@ class TutorSkillView(ModelViewSet):
             perfil = Crear_Cuenta_Tutor.objects.get(user=user)
 
         except Crear_Cuenta_Tutor.DoesNotExist:
-            raise ValueError('Debes Crearte una Cuenta')
+            raise PermissionDenegado('Debes Crearte una Cuenta')
         
         serializer.save(tutor_profile=perfil)
 
 
 @api_view(['GET','DELETE'])
 @permission_classes([IsAuthenticated, IsTutor])
+@throttle_classes([Tutor_Throttling])
 def mi_perfil_tutor(request):
     try:
         perfil = Crear_Cuenta_Tutor.objects.prefetch_related("skills").get(user=request.user)
@@ -166,6 +170,7 @@ class EstudianteView(ModelViewSet):
       queryset = Crear_Cuenta_Estudiante.objects.all()
       serializer_class = EstudianteCuentaSerializer
       permission_classes = [IsAuthenticated,IsEstudiante]
+      throttle_classes = [Estudiante_Throttling]
 
       def get_queryset(self):
         user = self.request.user
@@ -175,13 +180,14 @@ class EstudianteView(ModelViewSet):
       def perform_create(self, serializer):
         user = self.request.user
         if Crear_Cuenta_Estudiante.objects.filter(user=user).exists():
-            raise ValueError('Ya tienes un perfil Creado')
+            raise PermissionDenegado('Ya tienes un perfil Creado')
         serializer.save(user=user)
 
 class EstudianteSkillView(ModelViewSet):
     queryset = EstudianteSkill.objects.all()
     serializer_class = EstudianteSkillSerializer
     permission_classes = [IsAuthenticated,IsEstudiante]
+    throttle_classes = [Estudiante_Throttling]
 
     def get_queryset(self):
         user = self.request.user
@@ -195,13 +201,14 @@ class EstudianteSkillView(ModelViewSet):
             perfil = Crear_Cuenta_Estudiante.objects.get(user=user)
 
         except Crear_Cuenta_Estudiante.DoesNotExist:
-            raise ValueError('Debes Crearte una Cuenta')
+            raise PermissionDenegado('Debes Crearte una Cuenta')
         
         serializer.save(estudiante_profile=perfil)
       
 
 @api_view(['GET','DELETE'])
 @permission_classes([IsAuthenticated, IsEstudiante])
+@throttle_classes([Estudiante_Throttling])
 def mi_perfil_estudiante(request):
     try:
         perfil = Crear_Cuenta_Estudiante.objects.prefetch_related("skills").get(user=request.user)
@@ -222,6 +229,7 @@ class SkillMatchView(ModelViewSet):
     queryset = SkillMatch.objects.all()
     serializer_class = SkillMatchSerializer
     permission_classes = [IsAuthenticated,IsEstudiante]
+    throttle_classes = [Estudiante_Throttling]
     def get_queryset(self):
           user = self.request.user
           return SkillMatch.objects.filter(estudiante__user=user)
@@ -232,20 +240,20 @@ class SkillMatchView(ModelViewSet):
         try:
             estudiante_profile = Crear_Cuenta_Estudiante.objects.get(user=user)
         except Crear_Cuenta_Estudiante.DoesNotExist:
-          raise ValueError('Debes crear tu cuenta primero')
+          raise PermissionDenegado('Debes crear tu cuenta primero')
 
         estudiante_skill = serializer.validated_data.get('estudiante_skill')
 
         tutor_profile = serializer.validated_data.get("tutor")
 
         if not estudiante_skill:
-            raise ValueError('Debes Seleccionar una habilidad del estudiante')
+            raise PermissionDenegado('Debes Seleccionar una habilidad del estudiante')
         
         if not tutor_profile:
-            raise ValueError('Debes seleccionar un tutor')
+            raise PermissionDenegado('Debes seleccionar un tutor')
         
         if estudiante_skill.estudiante_profile != estudiante_profile:
-            raise ValueError('No puedes usar habilidades de otro estudiante')
+            raise PermissionDenegado('No puedes usar habilidades de otro estudiante')
         
         skill_tutor = TutorSkill.objects.filter(
             tutor_profile=tutor_profile,
@@ -255,7 +263,7 @@ class SkillMatchView(ModelViewSet):
         ).first()
 
         if not skill_tutor:
-            raise ValueError('Este tutor no posee los requerimientos que buscas')
+            raise PermissionDenegado('Este tutor no posee los requerimientos que buscas')
         
 
         serializer.save(
@@ -267,6 +275,7 @@ class ConversacionView(ModelViewSet):
     queryset = Conversacion.objects.all()
     serializer_class = ConversacionSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [General_Throttling]
 
     def get_queryset(self):
         user = self.request.user
@@ -279,6 +288,7 @@ class MensajeView(ModelViewSet):
     queryset = Mensajes.objects.all()
     serializer_class = MensajeSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [General_Throttling]
 
     def get_queryset(self):
         user = self.request.user
@@ -301,13 +311,13 @@ class MensajeView(ModelViewSet):
         es_tutor = match.tutor.user == user
 
         if not(es_estudiante or es_tutor):
-            raise ValueError('No puedes enviar mensaje en esta conversacion')
+            raise PermissionDenegado('No puedes enviar mensaje en esta conversacion')
         
         existe_mensaje = Mensajes.objects.filter(conversacion=conversacion).exists()
 
         if not existe_mensaje:
             if not es_estudiante:
-                raise ValueError('Solo el estudiante puede iniciar el chat')
+                raise PermissionDenegado('Solo el estudiante puede iniciar el chat')
             
         serializer.save(enviados=user)
 
@@ -315,6 +325,7 @@ class TutoringSessionView(ModelViewSet):
       queryset = TutoringSession.objects.all()
       serializer_class = TutoringSessionSerializer
       permission_classes = [IsAuthenticated]
+      throttle_classes = [General_Throttling]
 
       def get_queryset(self):
           user = self.request.user
@@ -330,20 +341,20 @@ class TutoringSessionView(ModelViewSet):
           user = self.request.user
 
           if user.role !="estudiante":
-            raise ValueError('Solo los estudiantes pueden crear una tutoria')
+            raise PermissionDenegado('Solo los estudiantes pueden crear una tutoria')
           
           try:
             estudiante_profile = Crear_Cuenta_Estudiante.objects.get(user=user)
           except Crear_Cuenta_Estudiante.DoesNotExist:
-            raise ValueError('Debes crearte una cuenta primero')
+            raise PermissionDenegado('Debes crearte una cuenta primero')
           
           match = serializer.validated_data.get("match")
 
           if match.estudiante != estudiante_profile:
-            raise ValueError('No puedes crear tutorias que no son tuyos')
+            raise PermissionDenegado('No puedes crear tutorias que no son tuyos')
           
           if TutoringSession.objects.filter(match=match).exists():
-              raise ValueError('esta tutoria ya esta creada')
+              raise PermissionDenegado('esta tutoria ya esta creada')
           
           serializer.save()
             
@@ -352,6 +363,7 @@ class PagoView(ModelViewSet):
     queryset = Pago.objects.all()
     serializer_class = PagoSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [General_Throttling]
 
     def get_queryset(self):
         user = self.request.user
@@ -370,11 +382,11 @@ class PagoView(ModelViewSet):
         match = tutoria.match
 
         if match.estudiante.user !=user:
-            raise ValueError("Solo el estudiante match puede pagar la tutoria")
+            raise PermissionDenegado("Solo el estudiante match puede pagar la tutoria")
 
 
         if Pago.objects.filter(tutoria=tutoria).exists():
-            raise ValueError('Esta tutoria ya tiene pago registrado')
+            raise PermissionDenegado('Esta tutoria ya tiene pago registrado')
         
 
         serializer.save(estado="pagado")
@@ -383,6 +395,7 @@ class ReembolsoView(ModelViewSet):
     queryset=Reembolso.objects.all()
     serializer_class = ReembolsoSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [General_Throttling]
 
     def get_queryset(self):
         user = self.request.user
@@ -401,13 +414,13 @@ class ReembolsoView(ModelViewSet):
         match = pago.tutoria.match
 
         if match.estudiante.user !=user:
-            raise ValueError('Solo el estudiante puede solicitar reembolso')
+            raise PermissionDenegado('Solo el estudiante puede solicitar reembolso')
         
         if pago.estado != "pagado":
-            raise ValueError('Solo puedes pedir reembolso si el pago está en estado pagado.')
+            raise PermissionDenegado('Solo puedes pedir reembolso si el pago está en estado pagado.')
         
         if Reembolso.objects.filter(pago=pago).exists():
-            raise ValueError('Ya existe una solicitud de reembolso para este pago.')
+            raise PermissionDenegado('Ya existe una solicitud de reembolso para este pago.')
         
         serializer.save()
 
@@ -415,31 +428,25 @@ class ReviewView(ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-
-        if user.role =="tutor":
-            return Review.objects.filter(tutor__user=user)
-
+    throttle_classes = [General_Throttling]
 
     def perform_create(self, serializer):
         user = self.request.user
 
         if user.role == "tutor":
-            raise ValueError('Los tutores no pueden crear reseñas')
+            raise PermissionDenegado('Los tutores no pueden crear reseñas')
         
         tutoria = serializer.validated_data["tutoria"]
 
         if user.role != "estudiante":
-            raise ValueError('Solo los estudiante pueden crear reseñas')
+            raise PermissionDenegado('Solo los estudiante pueden crear reseñas')
 
         if tutoria.match.estudiante.user != user:
-            raise ValueError('No puedes reseñar una tutoria que no es tuya')
+            raise PermissionDenegado('No puedes reseñar una tutoria que no es tuya')
         
         if tutoria.estado != "finalizada":
 
-            raise ValueError('Solo puedes reseñar una tutoría finalizada.')
+            raise PermissionDenegado('Solo puedes reseñar una tutoría finalizada.')
         
         serializer.save(
             tutor=tutoria.match.tutor,
